@@ -8,7 +8,7 @@ see [branch release_7](https://github.com/Neuronys/ilias-pgcp_nolej/tree/release
 
 ## Requirements
 
-* ILIAS 8.x
+* ILIAS 8.x - 9.x
 * [Nolej AI for ILIAS LMS plugin](https://github.com/Neuronys/ilias-robj_nolej) installed and updated.
 
 ## Installation
