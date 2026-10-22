@@ -3,12 +3,12 @@ This is the companion plugin for [Nolej AI for ILIAS LMS](https://github.com/Neu
 
 Generate the activities with the main plugin, and insert them in your modules with this plugin.
 
-Note: this branch is for ILIAS 8. If you have ILIAS 6 or 7,
-see [branch release_7](https://github.com/Neuronys/ilias-pgcp_nolej/tree/release_7).
+Note: this branch is for ILIAS 10. For earlier versions see the branches
+`release_7`, `release_8` and `release_9` (if available) of the repository.
 
 ## Requirements
 
-* ILIAS 8.x - 9.x
+* ILIAS 10.x
 * [Nolej AI for ILIAS LMS plugin](https://github.com/Neuronys/ilias-robj_nolej) installed and updated.
 
 ## Installation
@@ -20,7 +20,7 @@ From the ILIAS directory, run:
 ```sh
 mkdir -p Customizing/global/plugins/Services/COPage/PageComponent
 cd Customizing/global/plugins/Services/COPage/PageComponent
-git clone -b release_8 https://github.com/Neuronys/ilias-pgcp_nolej NolejPageComponent
+git clone -b release_10 https://github.com/Neuronys/ilias-pgcp_nolej NolejPageComponent
 ```
 
 Return to the ILIAS directory and run:

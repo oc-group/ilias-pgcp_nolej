@@ -11,13 +11,12 @@
  */
 
 $id = "pcnlj";
-$version = "2.0";
+$version = "10.0.0";
 
-$ilias_min_version = "8.0";
-$ilias_max_version = "9.999";
+$ilias_min_version = "10.0";
+$ilias_max_version = "10.999";
 
 $responsible = "OC Open Consulting SB Srl";
 $responsible_mail = "plugins@oc-group.eu";
 
-// This PC cannot be exported.
 $supports_export = false;

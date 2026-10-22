@@ -9,3 +9,8 @@ plugin_title#:#Nolej
 select_obj#:#Select a Nolej object
 tab_configure#:#Configure
 err_not_found#:#Activity not found.
+err_nolej_missing#:#The Nolej plugin is not installed or not active. The Nolej activity cannot be displayed.
+err_h5p_missing#:#The H5P plugin is not installed or not active. The Nolej activity cannot be displayed.
+err_no_permission#:#You do not have permission to access this Nolej object.
+msg_obj_not_created#:#Nolej could not be added.
+msg_obj_not_modified#:#Nolej could not be updated.
