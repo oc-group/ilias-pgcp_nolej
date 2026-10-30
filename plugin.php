@@ -20,3 +20,4 @@ $responsible = "OC Open Consulting SB Srl";
 $responsible_mail = "plugins@oc-group.eu";
 
 $supports_export = false;
+$supports_cli_setup = true;
