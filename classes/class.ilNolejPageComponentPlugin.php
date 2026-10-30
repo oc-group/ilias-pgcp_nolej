@@ -18,11 +18,7 @@ declare(strict_types=1);
 class ilNolejPageComponentPlugin extends ilPageComponentPlugin
 {
     /** @var string */
-    /** @var string */
     public const PLUGIN_ID = "pcnlj";
-
-    /** @var string */
-    public const PLUGIN_DIR = "./Customizing/global/plugins/Services/COPage/PageComponent/NolejPageComponent";
 
     /**
      * Check whether the Nolej repository object plugin (and its classes
@@ -91,7 +87,8 @@ class ilNolejPageComponentPlugin extends ilPageComponentPlugin
     }
 
     /**
-     * Check whether the H5P plugin classes needed to render Nolej activities are loadable.
+     * Check whether the H5P plugin classes needed to render Nolej
+     * activities are loadable.
      * @return bool
      */
     public static function isH5PAvailable(): bool
@@ -121,29 +118,5 @@ class ilNolejPageComponentPlugin extends ilPageComponentPlugin
     {
         // $a_type can be auth, cat, crs, ...
         return true;
-    }
-
-    /**
-     * This function is called when the page content is cloned.
-     * @param array<array-key, mixed> $a_properties properties saved in the page, (should be modified if neccessary)
-     * @param string $a_plugin_version plugin version of the properties
-     */
-    public function onClone(array &$a_properties, string $a_plugin_version): void
-    {
-        // Nothing to clone.
-        parent::onClone($a_properties, $a_plugin_version);
-    }
-
-    /**
-     * This function is called before the page content is deleted.
-     * @param array<array-key, mixed> $a_properties properties saved in the page (will be deleted afterwards)
-     * @param string $a_plugin_version plugin version of the properties
-     * @param bool $move_operation
-     * @return void
-     */
-    public function onDelete(array $a_properties, string $a_plugin_version, bool $move_operation = false): void
-    {
-        // Nothing to delete.
-        parent::onDelete($a_properties, $a_plugin_version, $move_operation);
     }
 }

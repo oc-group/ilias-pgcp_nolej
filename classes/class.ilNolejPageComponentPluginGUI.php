@@ -17,11 +17,10 @@ declare(strict_types=1);
  * @ilCtrl_isCalledBy ilNolejPageComponentPluginGUI: ilPCPluggedGUI
  * @ilCtrl_Calls ilNolejPageComponentPluginGUI: ilNolejActivitySelectorGUI
  */
-class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
+class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI implements ilCtrlSecurityInterface
 {
     public const CMD_INSERT = "insert";
     public const CMD_CREATE = "create";
-    public const CMD_SAVE = "save";
     public const CMD_EDIT = "edit";
     public const CMD_UPDATE = "update";
     public const CMD_CANCEL = "cancel";
@@ -86,7 +85,6 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
                 switch ($cmd) {
                     case self::CMD_INSERT:
                     case self::CMD_CREATE:
-                    case self::CMD_SAVE:
                     case self::CMD_EDIT:
                     case self::CMD_UPDATE:
                     case self::CMD_CANCEL:
@@ -101,8 +99,9 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
     }
 
     /**
-     * Show a message when the Nolej plugin is not installed, then go back to the editor.
-     * Used by the commands executed through executeCommand() (create, update, ...).
+     * Show a message when the Nolej plugin is not installed, then go back
+     * to the editor. Used by the commands executed through executeCommand()
+     * (create, update, ...).
      * @return void
      */
     protected function showMissingNolej(): void
@@ -113,8 +112,9 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
 
     /**
      * Show a message in the page content instead of the selector form.
-     * insert() and edit() are called by ilPageComponentPluginGUI::getHTML(),
-     * which must return, so a redirect is not safe there.
+     * insert() and edit() are called by
+     * ilPageComponentPluginGUI::getHTML(), which must return, so a
+     * redirect is not safe there.
      * @return void
      */
     protected function showMissingNolejContent(): void
@@ -125,6 +125,61 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
             $DIC->ui()->factory()->messageBox()->failure($this->plugin->txt("err_nolej_missing"))
         );
         $this->tpl->setContent($message);
+    }
+
+    /**
+     * GET commands that change data: they need the CSRF token.
+     * @return string[]
+     */
+    public function getUnsafeGetCommands(): array
+    {
+        return [self::CMD_CREATE, self::CMD_UPDATE];
+    }
+
+    /**
+     * POST commands that are safe without the CSRF token.
+     * @return string[]
+     */
+    public function getSafePostCommands(): array
+    {
+        return [];
+    }
+
+    /**
+     * Check the CSRF token sent with the request. The interface alone is
+     * not enough: a request without cmdClass is judged against the base
+     * class, so the commands check the token themselves.
+     * @return bool
+     */
+    protected function hasValidToken(): bool
+    {
+        global $DIC;
+
+        try {
+            $query = $DIC->http()->wrapper()->query();
+            if (!$query->has(ilCtrlInterface::PARAM_CSRF_TOKEN)) {
+                return false;
+            }
+
+            $sent = $query->retrieve(
+                ilCtrlInterface::PARAM_CSRF_TOKEN,
+                $DIC->refinery()->kindlyTo()->string()
+            );
+
+            return (new ilCtrlTokenRepository())->getToken()->verifyWith($sent);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Refuse a write command sent without a valid token.
+     * @return void
+     */
+    protected function refuseInvalidToken(): void
+    {
+        $this->tpl->setOnScreenMessage("failure", $this->plugin->txt("err_invalid_token"), true);
+        $this->returnToParent();
     }
 
     /**
@@ -148,6 +203,11 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
      */
     public function create(): void
     {
+        if (!$this->hasValidToken()) {
+            $this->refuseInvalidToken();
+            return;
+        }
+
         if (!ilNolejPageComponentPlugin::isNolejAvailable()) {
             $this->showMissingNolej();
             return;
@@ -184,13 +244,13 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
     /**
      * Init selector form.
      * @param string $cmd
-     * @param string $cmdToCall
+     * @param string $cmd_to_call
      * @return ilPropertyFormGUI
      */
-    protected function initSelectorForm(string $cmd = "", string $cmdToCall = ""): ilPropertyFormGUI
+    protected function initSelectorForm(string $cmd = "", string $cmd_to_call = ""): ilPropertyFormGUI
     {
         $form = new ilPropertyFormGUI();
-        $exp = $this->getNolejSelectorGUI($cmd, $cmdToCall);
+        $exp = $this->getNolejSelectorGUI($cmd, $cmd_to_call);
         $exp->handleCommand();
 
         $selector = new ilNonEditableValueGUI($this->plugin->txt("select_obj"), "", true);
@@ -209,6 +269,11 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
      */
     public function update(): void
     {
+        if (!$this->hasValidToken()) {
+            $this->refuseInvalidToken();
+            return;
+        }
+
         if (!ilNolejPageComponentPlugin::isNolejAvailable()) {
             $this->showMissingNolej();
             return;
@@ -256,36 +321,48 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
             return false;
         }
 
-        $documentId = $request_wrapper->retrieve("document_id", $refinery->kindlyTo()->string());
-        $contentId = $request_wrapper->retrieve(
+        $document_id = $request_wrapper->retrieve("document_id", $refinery->kindlyTo()->string());
+        $content_id = $request_wrapper->retrieve(
             "content_id",
             $refinery->byTrying([$refinery->kindlyTo()->int(), $refinery->always(0)])
         );
 
         // The content must belong to the document, and the user must be
         // allowed to read a Nolej object that owns that document.
-        if (!ilNolejPageComponentPlugin::canReadNolejDocument($documentId)) {
+        if (!ilNolejPageComponentPlugin::canReadNolejDocument($document_id)) {
             return false;
         }
 
-        $result = $this->db->queryF(
-            "SELECT content_id FROM " . ilNolejPlugin::TABLE_H5P
-            . " WHERE document_id = %s AND content_id = %s",
-            ["string", "integer"],
-            [$documentId, $contentId]
-        );
-        if ($this->db->numRows($result) === 0) {
+        if (!$this->activityBelongsToDocument($document_id, $content_id)) {
             return false;
         }
 
         $a_properties = [
-            "document_id" => $documentId,
-            "content_id" => $contentId,
+            "document_id" => $document_id,
+            "content_id" => $content_id,
         ];
 
         return $a_create
             ? $this->createElement($a_properties)
             : $this->updateElement($a_properties);
+    }
+
+    /**
+     * Check that the activity belongs to the document.
+     * @param string $document_id
+     * @param int $content_id
+     * @return bool
+     */
+    protected function activityBelongsToDocument(string $document_id, int $content_id): bool
+    {
+        $result = $this->db->queryF(
+            "SELECT content_id FROM " . ilNolejPlugin::TABLE_H5P
+            . " WHERE document_id = %s AND content_id = %s",
+            ["string", "integer"],
+            [$document_id, $content_id]
+        );
+
+        return $this->db->numRows($result) > 0;
     }
 
     /**
@@ -299,7 +376,8 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
 
     /**
      * Get HTML for page component element depending on the context.
-     * @param string $a_mode page mode (edit, presentation, print, preview, offline)
+     * @param string $a_mode page mode (edit, presentation, print, preview,
+     * offline)
      * @param array<array-key, mixed> $a_properties
      * @param string $plugin_version
      * @return string html code
@@ -311,31 +389,57 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
     ): string {
         global $DIC;
 
-        $factory = $DIC->ui()->factory();
-        $renderer = $DIC->ui()->renderer();
-
         $tpl = $this->plugin->getTemplate("default/tpl.content.html");
 
         if (!ilNolejPageComponentPlugin::isNolejAvailable()) {
-            $missing = $renderer->render($factory->messageBox()->info($this->plugin->txt("err_nolej_missing")));
+            $missing = $DIC->ui()->renderer()->render(
+                $DIC->ui()->factory()->messageBox()->info($this->plugin->txt("err_nolej_missing"))
+            );
             $tpl->setVariable("CONTENT", $missing);
             return $tpl->get();
         }
 
-        $nolej = ilNolejPlugin::getInstance();
-
-        $error = $renderer->render($factory->messageBox()->failure($this->plugin->txt("err_not_found")));
-
-        if (!isset($a_properties["content_id"])) {
-            $tpl->setVariable("CONTENT", $error);
+        // A change in the Nolej plugin must not break every page that
+        // contains this component.
+        try {
+            $this->fillElementTemplate($tpl, $a_mode, $a_properties);
+            return $tpl->get();
+        } catch (\Throwable $e) {
+            $DIC->logger()->root()->error(
+                "NolejPageComponent: element not rendered: " . $e->getMessage()
+            );
+            $tpl = $this->plugin->getTemplate("default/tpl.content.html");
+            $tpl->setVariable("CONTENT", $this->renderNotFound());
             return $tpl->get();
         }
+    }
 
-        $contentId = (int) $a_properties["content_id"];
+    /**
+     * Fill the template of the element.
+     * @param ilTemplate $tpl
+     * @param string $a_mode page mode
+     * @param array<array-key, mixed> $a_properties
+     * @return void
+     */
+    protected function fillElementTemplate(ilTemplate $tpl, string $a_mode, array $a_properties): void
+    {
+        $nolej = ilNolejPlugin::getInstance();
+
+        $document_id = (string) ($a_properties["document_id"] ?? "");
+        $content_id = (int) ($a_properties["content_id"] ?? 0);
+
+        if (
+            $document_id === ""
+            || $content_id <= 0
+            || !$this->activityBelongsToDocument($document_id, $content_id)
+        ) {
+            $tpl->setVariable("CONTENT", $this->renderNotFound());
+            return;
+        }
 
         if ($a_mode !== "edit") {
-            $tpl->setVariable("CONTENT", $this->renderActivity($contentId));
-            return $tpl->get();
+            $tpl->setVariable("CONTENT", $this->renderActivity($content_id));
+            return;
         }
 
         $result = $this->db->queryF(
@@ -345,44 +449,60 @@ class ilNolejPageComponentPluginGUI extends ilPageComponentPluginGUI
             . " ON c.document_id = d.document_id"
             . " WHERE c.content_id = %s",
             ["integer"],
-            [$contentId]
+            [$content_id]
         );
 
         $row = $this->db->fetchAssoc($result);
         if ($row === null) {
-            $tpl->setVariable("CONTENT", $error);
-            return $tpl->get();
+            $tpl->setVariable("CONTENT", $this->renderNotFound());
+            return;
         }
 
         $type = (string) ($row["type"] ?? "");
-        $typeLabel = $type !== "" ? $nolej->txt("activities_" . $type) : "";
+        $type_label = $type !== "" ? $nolej->txt("activities_" . $type) : "";
+        $title = htmlspecialchars((string) $row["title"], ENT_QUOTES, "UTF-8");
         $tpl->touchBlock("title");
-        $tpl->setVariable("TITLE", sprintf($nolej->txt("activities_selected"), $typeLabel, $row["title"]));
-        $tpl->setVariable("CONTENT", $this->renderActivity($contentId));
-
-        return $tpl->get();
+        $tpl->setVariable("TITLE", sprintf($nolej->txt("activities_selected"), $type_label, $title));
+        $tpl->setVariable("CONTENT", $this->renderActivity($content_id));
     }
 
     /**
-     * Render the H5P activity, or a message box when H5P is missing or rendering fails.
-     * @param int $contentId
+     * Render the "activity not found" message box.
      * @return string html code
      */
-    protected function renderActivity(int $contentId): string
+    protected function renderNotFound(): string
     {
         global $DIC;
 
-        $factory = $DIC->ui()->factory();
-        $renderer = $DIC->ui()->renderer();
+        return $DIC->ui()->renderer()->render(
+            $DIC->ui()->factory()->messageBox()->failure($this->plugin->txt("err_not_found"))
+        );
+    }
+
+    /**
+     * Render the H5P activity, or a message box when H5P is missing or
+     * rendering fails.
+     * @param int $content_id
+     * @return string html code
+     */
+    protected function renderActivity(int $content_id): string
+    {
+        global $DIC;
 
         if (!ilNolejPageComponentPlugin::isH5PAvailable()) {
-            return $renderer->render($factory->messageBox()->info($this->plugin->txt("err_h5p_missing")));
+            return $DIC->ui()->renderer()->render(
+                $DIC->ui()->factory()->messageBox()->info($this->plugin->txt("err_h5p_missing"))
+            );
         }
 
         try {
-            return ilNolejPlugin::renderH5P($contentId);
-        } catch (\Throwable) {
-            return $renderer->render($factory->messageBox()->failure($this->plugin->txt("err_not_found")));
+            return ilNolejPlugin::renderH5P($content_id);
+        } catch (\Throwable $e) {
+            $DIC->logger()->root()->error(
+                "NolejPageComponent: H5P content " . $content_id
+                . " not rendered: " . $e->getMessage()
+            );
+            return $this->renderNotFound();
         }
     }
 }
