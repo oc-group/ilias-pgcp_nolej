@@ -1,16 +1,11 @@
-cmd_cancel#:#Cancel
-cmd_edit#:#Edit Nolej
-cmd_insert#:#Insert Nolej
-cmd_save#:#Save
-msg_obj_created#:#Nolej added.
-msg_obj_modified#:#Nolej updated.
-plugin_description#:#
-plugin_title#:#Nolej
-select_obj#:#Select a Nolej object
-tab_configure#:#Configure
-err_not_found#:#Activity not found.
-err_nolej_missing#:#Das Nolej-Plugin ist nicht installiert oder nicht aktiv. Die Nolej-Aktivität kann nicht angezeigt werden.
+cmd_insert#:#Nolej einfügen
 err_h5p_missing#:#Das H5P-Plugin ist nicht installiert oder nicht aktiv. Die Nolej-Aktivität kann nicht angezeigt werden.
+err_invalid_token#:#Ungültiges Sicherheits-Token. Bitte laden Sie die Seite neu und versuchen Sie es erneut.
 err_no_permission#:#Sie haben keine Berechtigung, auf dieses Nolej-Objekt zuzugreifen.
+err_nolej_missing#:#Das Nolej-Plugin ist nicht installiert oder nicht aktiv. Die Nolej-Aktivität kann nicht angezeigt werden.
+err_not_found#:#Aktivität nicht gefunden.
+msg_obj_created#:#Nolej hinzugefügt.
+msg_obj_modified#:#Nolej aktualisiert.
 msg_obj_not_created#:#Nolej konnte nicht hinzugefügt werden.
 msg_obj_not_modified#:#Nolej konnte nicht aktualisiert werden.
+select_obj#:#Nolej-Objekt auswählen

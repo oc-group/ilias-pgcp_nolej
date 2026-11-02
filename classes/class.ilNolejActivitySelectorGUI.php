@@ -30,7 +30,8 @@ class ilNolejActivitySelectorGUI extends ilRepositorySelectorExplorerGUI
      * ilNolejActivitySelectorGUI constructor.
      * @param object|string[] $a_parent_obj parent gui class or class array
      * @param string $a_parent_cmd
-     * @param object|string $a_selection_gui gui class that should be called for the selection command
+     * @param object|string $a_selection_gui gui class called for the
+     * selection command
      * @param string $a_selection_cmd
      * @param string $a_target_url
      */
@@ -67,16 +68,16 @@ class ilNolejActivitySelectorGUI extends ilRepositorySelectorExplorerGUI
 
         $main_tpl = $DIC->ui()->mainTemplate();
 
-        // The UI framework scripts are registered only when a component of
-        // that kind is rendered on the page; the modal and the tree are
-        // rendered asynchronously, so they are loaded explicitly.
+        // Modal and tree are rendered asynchronously, so their UI scripts
+        // are not registered by the page: load them explicitly.
         $main_tpl->addJavaScript("assets/js/modal.min.js");
         $main_tpl->addJavaScript("assets/js/tree.js");
-        $main_tpl->addJavaScript(ilNolejPageComponentPlugin::PLUGIN_DIR . "/js/activity_selector.js");
+        $plugin = $DIC["component.factory"]->getPlugin(ilNolejPageComponentPlugin::PLUGIN_ID);
+        $main_tpl->addJavaScript($plugin->getRelativeDirectory() . "/js/activity_selector.js");
 
         $this->ctrl->setParameter($this, "selection_cmd", $this->selection_cmd);
-        $asyncUrl = $this->ctrl->getLinkTarget($this, "insert_activityModal");
-        $main_tpl->addOnLoadCode("pcnlj_setup_modal(" . json_encode($asyncUrl, JSON_THROW_ON_ERROR) . ");");
+        $async_url = $this->ctrl->getLinkTarget($this, "insert_activityModal");
+        $main_tpl->addOnLoadCode("pcnlj_setup_modal(" . json_encode($async_url, JSON_THROW_ON_ERROR) . ");");
 
         return parent::getHTML($new);
     }
@@ -95,8 +96,8 @@ class ilNolejActivitySelectorGUI extends ilRepositorySelectorExplorerGUI
 
         // Check if selected object has any activity.
         $ref_id = (int) $a_node["child"];
-        $objGui = new ilObjNolejGUI($ref_id);
-        $manager = new ilNolejManagerGUI($objGui);
+        $obj_gui = new ilObjNolejGUI($ref_id);
+        $manager = new ilNolejManagerGUI($obj_gui);
 
         $result = $this->db->queryF(
             "SELECT DISTINCT generated FROM " . ilNolejPlugin::TABLE_H5P
@@ -139,9 +140,8 @@ class ilNolejActivitySelectorGUI extends ilRepositorySelectorExplorerGUI
     {
         $cmd = $this->ctrl->getCmd();
         switch ($cmd) {
-            // The "insert_" prefix lets the request pass the creation mode of
-            // ilPageEditorGUI, which accepts only commands starting with
-            // "insert" or "create".
+            // The "insert_" prefix passes the creation mode of
+            // ilPageEditorGUI: it accepts only "insert*" or "create*".
             case "insert_activityModal":
             case "activityModal":
                 $this->activityModal();
@@ -181,9 +181,9 @@ class ilNolejActivitySelectorGUI extends ilRepositorySelectorExplorerGUI
         }
 
         // Modal content.
-        $objGui = new ilObjNolejGUI($ref_id);
-        $manager = new ilNolejManagerGUI($objGui);
-        $title = $objGui->getObject()?->getTitle() ?? "";
+        $obj_gui = new ilObjNolejGUI($ref_id);
+        $manager = new ilNolejManagerGUI($obj_gui);
+        $title = htmlspecialchars($obj_gui->getObject()?->getTitle() ?? "", ENT_QUOTES, "UTF-8");
         $content = $this->initActivityForm((string) $manager->documentId);
         $modal = $this->factory->modal()->roundtrip($title, $content);
 
@@ -193,10 +193,10 @@ class ilNolejActivitySelectorGUI extends ilRepositorySelectorExplorerGUI
 
     /**
      * Activities expandable tree.
-     * @param string $documentId
+     * @param string $document_id
      * @return \ILIAS\UI\Component\Tree\Tree
      */
-    protected function initActivityForm(string $documentId): \ILIAS\UI\Component\Tree\Tree
+    protected function initActivityForm(string $document_id): \ILIAS\UI\Component\Tree\Tree
     {
         $nolej = ilNolejPlugin::getInstance();
 
@@ -205,26 +205,26 @@ class ilNolejActivitySelectorGUI extends ilRepositorySelectorExplorerGUI
             . " WHERE document_id = %s"
             . " ORDER BY generated DESC",
             ["string"],
-            [$documentId]
+            [$document_id]
         );
 
         $data = [];
-        $lastTimestamp = "";
-        $i = -1;
+        $last_timestamp = "";
+        $group_index = -1;
         while ($row = $this->db->fetchAssoc($result)) {
             $timestamp = $row["generated"];
-            if ($timestamp != $lastTimestamp) {
-                $lastTimestamp = $timestamp;
-                $i++;
+            if ($timestamp != $last_timestamp) {
+                $last_timestamp = $timestamp;
+                $group_index++;
                 $datetime = ilDatePresentation::formatDate(new ilDateTime($timestamp, IL_CAL_UNIX));
-                $data[$i] = [
+                $data[$group_index] = [
                     "label" => $datetime,
                     "content_id" => null,
                     "children" => [],
                 ];
             }
 
-            $data[$i]["children"][] = [
+            $data[$group_index]["children"][] = [
                 "label" => $nolej->txt("activities_" . $row["type"]),
                 "content_id" => $row["content_id"],
                 "children" => [],
@@ -269,7 +269,7 @@ class ilNolejActivitySelectorGUI extends ilRepositorySelectorExplorerGUI
         return $this->factory->tree()->expandable("Label", $recursion)
             ->withEnvironment([
                 "first" => $data[0]["label"] ?? "",
-                "url" => ILIAS_HTTP_PATH . "/" . $this->target_url . "&document_id={$documentId}",
+                "url" => ILIAS_HTTP_PATH . "/" . $this->target_url . "&document_id={$document_id}",
             ])
             ->withData($data)
             ->withHighlightOnNodeClick(true);

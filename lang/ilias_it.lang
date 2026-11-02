@@ -1,16 +1,11 @@
-cmd_cancel#:#Annulla
-cmd_edit#:#Modifica Nolej
 cmd_insert#:#Inserisci Nolej
-cmd_save#:#Salva
+err_h5p_missing#:#Il plugin H5P non è installato o non è attivo. Non è possibile mostrare l'attività Nolej.
+err_invalid_token#:#Token di sicurezza non valido. Ricarica la pagina e riprova.
+err_no_permission#:#Non hai i permessi per accedere a questo oggetto Nolej.
+err_nolej_missing#:#Il plugin Nolej non è installato o non è attivo. Non è possibile mostrare l'attività Nolej.
+err_not_found#:#Attività non trovata.
 msg_obj_created#:#Nolej aggiunto.
 msg_obj_modified#:#Nolej aggiornato.
-plugin_description#:#
-plugin_title#:#Nolej
-select_obj#:#Seleziona un oggetto Nolej
-tab_configure#:#Configura
-err_not_found#:#Attività non trovata.
-err_nolej_missing#:#Il plugin Nolej non è installato o non è attivo. Non è possibile mostrare l'attività Nolej.
-err_h5p_missing#:#Il plugin H5P non è installato o non è attivo. Non è possibile mostrare l'attività Nolej.
-err_no_permission#:#Non hai i permessi per accedere a questo oggetto Nolej.
 msg_obj_not_created#:#Impossibile aggiungere Nolej.
 msg_obj_not_modified#:#Impossibile aggiornare Nolej.
+select_obj#:#Seleziona un oggetto Nolej

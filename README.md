@@ -9,7 +9,9 @@ Note: this branch is for ILIAS 10. For earlier versions see the branches
 ## Requirements
 
 * ILIAS 10.x
-* [Nolej AI for ILIAS LMS plugin](https://github.com/Neuronys/ilias-robj_nolej) installed and updated.
+* [Nolej AI for ILIAS LMS plugin](https://github.com/Neuronys/ilias-robj_nolej)
+  installed and updated (branch `release_10`)
+* H5P plugin installed and active: without it the activities are not shown
 
 ## Installation
 
@@ -18,8 +20,8 @@ Note: this branch is for ILIAS 10. For earlier versions see the branches
 From the ILIAS directory, run:
 
 ```sh
-mkdir -p Customizing/global/plugins/Services/COPage/PageComponent
-cd Customizing/global/plugins/Services/COPage/PageComponent
+mkdir -p public/Customizing/global/plugins/Services/COPage/PageComponent
+cd public/Customizing/global/plugins/Services/COPage/PageComponent
 git clone -b release_10 https://github.com/Neuronys/ilias-pgcp_nolej NolejPageComponent
 ```
 
