@@ -11,7 +11,7 @@
  */
 
 $id = "pcnlj";
-$version = "2.0";
+$version = "8.1.0";
 
 $ilias_min_version = "8.0";
 $ilias_max_version = "9.999";
